@@ -94,47 +94,69 @@ public class TodoListApp extends JFrame {
     // --- Helper Methods (Implement in next steps) ---
 
     private void updateListModel() {
-        // TODO: Clear listModel and add all tasks from taskList
-         listModel.clear();
-         for (Task task : taskList) {
-             listModel.addElement(task);
-         }
+        listModel.clear(); // Remove all elements from the GUI model
+        if (taskList != null) { // Add tasks from our underlying list
+            for (Task task : taskList) {
+                listModel.addElement(task); // Add task to the GUI model (JList updates)
+            }
+        }
     }
 
+    @SuppressWarnings("unchecked") // Suppress warning for the list cast
     private List<Task> loadTasksFromFile() {
-        // TODO: Implement loading logic (similar to console version)
-        // Temporary: Return empty list for now
-         List<Task> loadedTasks = new ArrayList<>();
-         File dataFile = new File(DATA_FILE_NAME);
-         if (dataFile.exists()) {
-             try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(dataFile))) {
-                 Object readObject = ois.readObject();
-                 if (readObject instanceof List) {
-                     // Basic check - could be more robust
-                     loadedTasks = (List<Task>) readObject;
-                     System.out.println("Tasks loaded from " + DATA_FILE_NAME);
-                 }
-             } catch (FileNotFoundException e) { /* Already checked exists */ }
-             catch (IOException | ClassNotFoundException e) {
-                 System.err.println("Error loading tasks: " + e.getMessage() + ". Starting fresh.");
-                 // Optionally show a dialog to the user:
-                 // JOptionPane.showMessageDialog(this, "Error loading tasks:\n" + e.getMessage(), "Load Error", JOptionPane.ERROR_MESSAGE);
-             }
-         }
-         return loadedTasks;
+        List<Task> loadedTasks = new ArrayList<>(); // Default to empty list
+        File dataFile = new File(DATA_FILE_NAME);
+        if (dataFile.exists()) {
+            try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(dataFile))) {
+                Object readObject = ois.readObject();
+                if (readObject instanceof List) { // Basic check for safety
+                     // Ensure the list contains Task objects (more robust check)
+                    List<?> potentiallyTasks = (List<?>) readObject;
+                    if (potentiallyTasks.isEmpty() || potentiallyTasks.get(0) instanceof Task) {
+                        loadedTasks = (List<Task>) potentiallyTasks; // Perform the cast
+                        System.out.println("Tasks loaded successfully from " + DATA_FILE_NAME);
+                    } else {
+                        System.err.println("Warning: Data file contains list of unexpected type. Starting fresh.");
+                         // Optionally show error dialog
+                    }
+                } else {
+                    System.err.println("Warning: Data file format is incorrect. Starting fresh.");
+                     // Optionally show error dialog
+                }
+            } catch (FileNotFoundException e) {
+                // Should not happen due to exists() check, but good practice
+                System.out.println("Data file not found. Starting with an empty list.");
+            } catch (IOException | ClassNotFoundException | ClassCastException e) {
+                 // Catch potential issues during deserialization or casting
+                System.err.println("Error loading tasks: " + e.getMessage() + ". Starting fresh.");
+                // Optionally show error dialog:
+                JOptionPane.showMessageDialog(this, "Error loading tasks:\n" + e.getMessage() + "\nStarting with an empty list.", "Load Error", JOptionPane.ERROR_MESSAGE);
+                loadedTasks = new ArrayList<>(); // Ensure we return an empty list on error
+            }
+        } else {
+            System.out.println("No existing task file found (" + DATA_FILE_NAME + "). Starting with an empty list.");
+        }
+        // Ensure taskList instance variable is updated IF loading succeeded OR if starting fresh
+        // If load failed and returned default empty, we still need taskList to be that empty list
+        this.taskList = loadedTasks; // Make sure the main taskList is updated
+        return loadedTasks; // Return the loaded (or empty) list
     }
+
 
     private void saveTasksToFile() {
-        // TODO: Implement saving logic (similar to console version)
-         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(DATA_FILE_NAME))) {
-             oos.writeObject(taskList);
-         } catch (IOException e) {
-             System.err.println("Error saving tasks: " + e.getMessage());
-              // Optionally show a dialog to the user:
-             // JOptionPane.showMessageDialog(this, "Error saving tasks:\n" + e.getMessage(), "Save Error", JOptionPane.ERROR_MESSAGE);
-         }
+        if (taskList == null) {
+            System.err.println("Task list is null, cannot save.");
+            return;
+        }
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(DATA_FILE_NAME))) {
+            oos.writeObject(taskList); // Save the entire list
+            System.out.println("Tasks saved to " + DATA_FILE_NAME);
+        } catch (IOException e) {
+            System.err.println("Error saving tasks: " + e.getMessage());
+             // Optionally show error dialog:
+            JOptionPane.showMessageDialog(this, "Error saving tasks:\n" + e.getMessage(), "Save Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
-
     // --- Action Listener Methods (Implement in next steps) ---
 
     // (addActionListener, completeActionListener, removeActionListener)
