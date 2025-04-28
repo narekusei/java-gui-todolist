@@ -51,7 +51,6 @@ public class TodoListApp extends JFrame {
         completeButton = new JButton("Mark Complete");
         removeButton = new JButton("Remove Task");
 
-        // 4. Set up Layout
         // Use BorderLayout for the main frame content pane
         setLayout(new BorderLayout(5, 5)); // Gaps between components
 
@@ -71,7 +70,7 @@ public class TodoListApp extends JFrame {
         add(new JScrollPane(taskJList), BorderLayout.CENTER); // List in the middle (scrollable)
         add(buttonPanel, BorderLayout.SOUTH); // Action buttons at the bottom
 
-        // 5. Add Window Listener for saving on close (Implementation later)
+        //Window Listener for saving on close
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
@@ -84,14 +83,41 @@ public class TodoListApp extends JFrame {
         });
 
 
-        // (Action Listeners for buttons will be added in the next steps)
+        addButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                addTask();
+            }
+        });
 
-        // Make the window visible - DO THIS LAST after adding all components
-        // setVisible(true); // We'll call this from Main.java using SwingUtilities
+        completeButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                markTaskComplete();
+            }
+        });
+
+        removeButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                removeTask();
+            }
+        });
+
+        // Also allow adding task by pressing Enter in the text field
+        taskInputTextField.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                addTask();
+            }
+        });
+
+        // Make the window visible
+        // setVisible(true);
     }
 
 
-    // --- Helper Methods (Implement in next steps) ---
+    // --- Helper Methods ---
 
     private void updateListModel() {
         listModel.clear(); // Remove all elements from the GUI model
@@ -157,8 +183,68 @@ public class TodoListApp extends JFrame {
             JOptionPane.showMessageDialog(this, "Error saving tasks:\n" + e.getMessage(), "Save Error", JOptionPane.ERROR_MESSAGE);
         }
     }
-    // --- Action Listener Methods (Implement in next steps) ---
+    private void addTask() {
+        String description = taskInputTextField.getText().trim();
+        if (description.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Task description cannot be empty.", "Input Error", JOptionPane.WARNING_MESSAGE);
+            return; // Stop if description is empty
+        }
 
-    // (addActionListener, completeActionListener, removeActionListener)
+        try {
+            Task newTask = new Task(description); // Use Task constructor validation
+            taskList.add(newTask);         // Add to the underlying list
+            updateListModel();            // Refresh the JList display
+            taskInputTextField.setText(""); // Clear the input field
+            System.out.println("Task added: " + description);
+        } catch (IllegalArgumentException ex) {
+             // This shouldn't happen if trim() and isEmpty check works, but good practice
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Input Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void markTaskComplete() {
+        int selectedIndex = taskJList.getSelectedIndex(); // Get index of the selected item
+
+        if (selectedIndex == -1) { // Nothing selected
+            JOptionPane.showMessageDialog(this, "Please select a task to mark as complete.", "Selection Error", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        Task selectedTask = listModel.getElementAt(selectedIndex); // Get Task object from the model
+
+        if (!selectedTask.isDone()) {
+            selectedTask.setDone(true);
+             // The list needs to be visually updated. Firing an event is complex,
+             // so the simplest way is to just refresh the whole model.
+            updateListModel();
+             // To maintain selection (optional, slightly advanced):
+            taskJList.setSelectedIndex(selectedIndex);
+            System.out.println("Task marked complete: " + selectedTask.getDescription());
+        } else {
+            JOptionPane.showMessageDialog(this, "Task is already marked as complete.", "Information", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+
+    private void removeTask() {
+        int selectedIndex = taskJList.getSelectedIndex();
+
+         if (selectedIndex == -1) { // Nothing selected
+            JOptionPane.showMessageDialog(this, "Please select a task to remove.", "Selection Error", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+         // Optional: Confirmation dialog
+        Task taskToRemove = listModel.getElementAt(selectedIndex);
+        int confirmation = JOptionPane.showConfirmDialog(this,
+                "Are you sure you want to remove this task?\n\"" + taskToRemove.getDescription() + "\"",
+                "Confirm Removal",
+                JOptionPane.YES_NO_OPTION);
+
+        if (confirmation == JOptionPane.YES_OPTION) {
+             taskList.remove(taskToRemove); // Remove from the underlying list
+             updateListModel();             // Refresh the JList display
+            System.out.println("Task removed: " + taskToRemove.getDescription());
+        }
+    }
 
 } // End of TodoListApp class
