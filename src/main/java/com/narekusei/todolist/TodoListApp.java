@@ -113,7 +113,7 @@ public class TodoListApp extends JFrame {
         });
 
         // Make the window visible
-        // setVisible(true);
+        setVisible(true);
     }
 
 
